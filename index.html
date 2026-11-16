@@ -87,7 +87,7 @@ button:focus-visible, input:focus-visible, canvas:focus-visible, summary:focus-v
 .tile .v { font-family: var(--font-num); font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .tiles.opt .tile { background: var(--sunk); }
 .tiles.opt .v { font-size: 22px; }
-.pill { align-self: flex-start; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--pill-bg); color: var(--pill-ink); margin-top: 4px; }
+.pill { align-self: flex-start; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--pill-bg); color: var(--pill-ink); margin-top: 4px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .pill.ok { background: var(--ok-bg); color: var(--ok-ink); }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
 .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; background: var(--c); }
@@ -176,11 +176,11 @@ tfoot td { font-weight: 600; border-bottom: 0; }
   <section class="card controls" aria-label="Controles">
     <div class="slider">
       <label for="sa">Pendiente a (°C/km) <output id="oa" for="sa">—</output></label>
-      <input type="range" id="sa" min="-10" max="-2.3" step="0.01" value="-3">
+      <input type="range" id="sa" min="-8" max="-4.5" step="0.01" value="-4.8">
     </div>
     <div class="slider">
       <label for="sb">Intercepto b (°C) <output id="ob" for="sb">—</output></label>
-      <input type="range" id="sb" min="23" max="37" step="0.01" value="25">
+      <input type="range" id="sb" min="25" max="33" step="0.01" value="26">
     </div>
     <div class="buttons">
       <button class="primary" id="btnMin" type="button">Ir al mínimo</button>
@@ -193,7 +193,7 @@ tfoot td { font-weight: 600; border-bottom: 0; }
   <section class="tiles" aria-label="Medidas de la recta actual">
     <div class="tile"><span class="k">S(a, b) · suma de cuadrados</span><span class="v" id="vS">—</span><span class="pill" id="pill">—</span></div>
     <div class="tile"><span class="k">RMSE = √(S / n)</span><span class="v" id="vRMSE">—</span><span class="k">°C</span></div>
-    <div class="tile"><span class="k">R² = 1 − S / SST</span><span class="v" id="vR2">—</span><span class="k" id="vR2t">—</span></div>
+    <div class="tile"><span class="k">R² = 1 − S / SST</span><span class="v" id="vR2">—</span><span class="k" id="vR2t" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</span></div>
     <div class="tile"><span class="k">‖∇S‖</span><span class="v" id="vGn">—</span><span class="k">0 solo en el punto crítico</span></div>
   </section>
 
@@ -240,7 +240,7 @@ tfoot td { font-weight: 600; border-bottom: 0; }
     <div class="pred">
       <div class="slider">
         <label for="sh">Altitud de un lugar sin estación <output id="oh" for="sh">—</output></label>
-        <input type="range" id="sh" min="0" max="3500" step="10" value="1900">
+        <input type="range" id="sh" min="0" max="3000" step="10" value="1900">
       </div>
       <div><span class="k sub">Temperatura media estimada</span><br><span class="big" id="pT">—</span></div>
     </div>
@@ -290,7 +290,7 @@ tfoot td { font-weight: 600; border-bottom: 0; }
   const tr = H11 + H22, disc = Math.sqrt(tr*tr - 4*detH);
   const l1 = (tr - disc)/2, l2 = (tr + disc)/2;
 
-  const A0=-10, A1=-2.3, B0=23, B1=37;
+  const A0=-8, A1=-4.5, B0=25, B1=33;   // rangos físicamente realistas
   const $ = id => document.getElementById(id);
   const fmt = (v,d=2) => (Math.abs(v) < 0.5*Math.pow(10,-d) ? 0 : v)
       .toLocaleString("es-CO",{minimumFractionDigits:d, maximumFractionDigits:d}).replace("-", "−");
@@ -317,13 +317,14 @@ tfoot td { font-weight: 600; border-bottom: 0; }
     return `rgba(${(v>>16)&255},${(v>>8)&255},${v&255},${al})`; };
 
   // ================= Estado =================
-  let a = -3, b = 25, path = [], anim = null, gdIter = 0, view = "map";
+  let a = -4.8, b = 26, path = [], anim = null, gdIter = 0, view = "map";
   let yaw = -0.62, pitch = 0.42;
 
   // ================= Utilidades de canvas =================
   function setup(cv) {
     const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-    const h = Number(cv.getAttribute("height"));
+    if (!cv.dataset.h) cv.dataset.h = cv.getAttribute("height");   // altura base en px CSS (no cambia al redibujar)
+    const h = Number(cv.dataset.h);
     cv.style.height = h + "px";
     const W = Math.max(r.width, 10);
     cv.width = Math.round(W*dpr); cv.height = Math.round(h*dpr);
@@ -360,7 +361,7 @@ tfoot td { font-weight: 600; border-bottom: 0; }
   function drawData() {
     const { g, w, h } = setup(cData);
     const m = { l: 48, r: 14, t: 10, b: 40 };
-    const { X, Y } = axes(g, w, h, m, [0,3.1], [8,32], range(0,3,0.5), range(10,30,5), "Altitud h (km)", "Temperatura T (°C)");
+    const { X, Y } = axes(g, w, h, m, [0,3.1], [0,35], range(0,3,0.5), range(0,35,5), "Altitud h (km)", "Temperatura T (°C)");
     dataGeo = { X, Y, m, w, h };
     g.save(); g.beginPath(); g.rect(m.l, m.t, w-m.l-m.r, h-m.t-m.b); g.clip();
     // cuadrados de residuos (lado = |eᵢ| en la escala vertical): su área total representa S
@@ -439,15 +440,15 @@ tfoot td { font-weight: 600; border-bottom: 0; }
     const X = v => m.l + (v-A0)/(A1-A0)*pw, Y = v => h - m.b - (v-B0)/(B1-B0)*ph;
     mapGeo = { m, w, h, X, Y };
     g.font = FONT(12); g.fillStyle = C.muted;
-    for (const t of range(-10,-3,1)) { g.textAlign="center"; g.fillText(fmt(t,0), X(t), h-m.b+16); }
-    for (const t of range(24,36,2)) { g.textAlign="right"; g.fillText(fmt(t,0), m.l-6, Y(t)+4); }
+    for (const t of range(-8,-5,1)) { g.textAlign="center"; g.fillText(fmt(t,0), X(t), h-m.b+16); }
+    for (const t of range(26,32,2)) { g.textAlign="right"; g.fillText(fmt(t,0), m.l-6, Y(t)+4); }
     g.fillStyle = C.ink; g.font = FONT(13); g.textAlign="center";
     g.fillText("Pendiente a (°C/km)", (m.l+w-m.r)/2, h-6);
     g.save(); g.translate(14, (m.t+h-m.b)/2); g.rotate(-Math.PI/2); g.fillText("Intercepto b (°C)", 0, 0); g.restore();
     // etiquetas de algunos niveles sobre el eje menor de las elipses
     g.save(); g.beginPath(); g.rect(m.l, m.t, pw, ph); g.clip();
     g.font = FONT(11); g.textAlign = "left";
-    for (const L of (pw > 420 ? [30, 120, 360] : [])) {
+    for (const L of (pw > 420 ? [20, 60] : [])) {
       // punto sobre la recta b = b* (traza horizontal) donde S = L
       const disc2 = (L - Smin)/Sxx; if (disc2 <= 0) continue;
       const aa = aStar + Math.sqrt(disc2); if (aa > A1) continue;
@@ -556,7 +557,7 @@ tfoot td { font-weight: 600; border-bottom: 0; }
     const xr = isA ? [A0, A1] : [B0, B1];
     const f = v => isA ? S(v, b) : S(a, v);
     const ymax = 400, col = isA ? C.accent : C.teal;
-    const { X, Y } = axes(g, w, h, m, xr, [0, ymax], isA ? range(-10,-3,1) : range(24,36,2), range(0,400,100),
+    const { X, Y } = axes(g, w, h, m, xr, [0, ymax], isA ? range(-8,-5,1) : range(26,32,2), range(0,400,100),
                           isA ? "a (°C/km)" : "b (°C)", "S");
     g.save(); g.beginPath(); g.rect(m.l, m.t, w-m.l-m.r, h-m.t-m.b); g.clip();
     g.strokeStyle = C.line; g.lineWidth = 2; g.setLineDash([5,4]); g.beginPath();
@@ -637,10 +638,10 @@ tfoot td { font-weight: 600; border-bottom: 0; }
     $("eqLine").textContent = `T = ${fmt(a,4)}·h + ${fmt(b,4)}`;
     const s = S(a,b), [ga,gb] = grad(a,b), gn = Math.hypot(ga,gb), r2 = 1 - s/SST;
     $("vS").textContent = fmt(s); $("vRMSE").textContent = fmt(Math.sqrt(s/n));
-    $("vR2").textContent = fmt(r2, 4); $("vR2t").textContent = r2 < 0 ? "peor que usar el promedio" : `explica el ${fmt(100*r2,1)} %`;
+    $("vR2").textContent = fmt(r2, 4); $("vR2t").textContent = r2 < 0 ? "peor que el promedio" : `explica el ${fmt(100*r2,1)} %`;
     $("vGn").textContent = fmt(gn);
     const pill = $("pill"), near = s - Smin < 0.005;
-    pill.textContent = near ? "En el mínimo: ∇S ≈ 0" : `${fmt(s - Smin)} por encima del mínimo`;
+    pill.textContent = near ? "En el mínimo: ∇S ≈ 0" : `+${fmt(s - Smin)} sobre el mínimo`;
     pill.classList.toggle("ok", near);
     liveMath(); table(); predict();
     drawData(); drawViews();
@@ -680,7 +681,7 @@ tfoot td { font-weight: 600; border-bottom: 0; }
     anim = requestAnimationFrame(step);
   }
   $("btnMin").addEventListener("click", () => animateTo(aStar, bStar, "Solución de las ecuaciones normales: aquí ∇S = (0, 0)."));
-  $("btnReset").addEventListener("click", () => animateTo(-3, 25, "Punto de partida (−3; 25), el mismo de la figura de curvas de nivel del informe."));
+  $("btnReset").addEventListener("click", () => animateTo(-4.8, 26, "Punto de partida (−4,8; 26): una recta razonable, pero no la mejor."));
   $("btnGD").addEventListener("click", () => {
     stop(); path = [[a,b]]; gdIter = 0;
     const eta = 1/l2;   // paso η = 1/λ_max: garantiza convergencia en una cuadrática
