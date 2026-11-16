@@ -118,7 +118,27 @@ th { font-weight: 600; color: var(--muted); font-size: 13px; }
 td.mono { font-family: var(--font-num); }
 tfoot td { font-weight: 600; border-bottom: 0; }
 .foot { font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: 14px; }
+/* Recorrido guiado */
+.guide { display: grid; grid-template-columns: 1fr auto; gap: 12px 24px; align-items: center; border: 2px solid var(--accent); }
+.steps { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.steps button { font-size: 14px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); background: var(--panel); }
+.steps button .sn { font-family: var(--font-num); margin-right: 6px; }
+.steps button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.steps button.seen:not([aria-selected="true"]) { color: var(--accent); border-color: var(--accent); }
+.gbody { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gk { margin: 0; font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: .06em; text-transform: uppercase; }
+.gbody h2 { font-size: 21px; }
+.gbody p.gx { margin: 0; font-size: 17px; max-width: 80ch; }
+.gnav { display: flex; gap: 10px; align-self: end; }
+.focus { outline: 3px solid var(--accent); outline-offset: 3px; box-shadow: 0 0 0 9px color-mix(in srgb, var(--accent) 14%, transparent); transition: box-shadow .25s; }
+/* Textos en palabras simples */
+.plain { margin: 0; font-size: 14.5px; color: var(--ink); background: var(--sunk); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 0 8px 8px 0; }
+.plain b { font-weight: 600; }
+.read { grid-column: 1 / -1; margin: 0; font-size: 16px; font-weight: 500; padding: 10px 14px; border-radius: 8px; background: var(--pill-bg); color: var(--pill-ink); }
+.read.ok { background: var(--ok-bg); color: var(--ok-ink); }
+.tile .k b { color: var(--ink); font-weight: 600; }
 @media (max-width: 960px) {
+  .guide { grid-template-columns: 1fr; }
   .grid, .grid3 { grid-template-columns: 1fr; }
   .controls { grid-template-columns: 1fr; }
   .tiles { grid-template-columns: 1fr 1fr; }
@@ -138,6 +158,19 @@ tfoot td { font-weight: 600; border-bottom: 0; }
     <p class="lead" style="grid-column:1/-1">¿Cuánto baja la temperatura al subir en Colombia? Ajustamos T = a·h + b a 13 estaciones del IDEAM minimizando S(a, b) = Σ(Tᵢ − a·hᵢ − b)². Cada recta es un punto (a, b): muévelo y verás, al mismo tiempo, la recta, la superficie de error y las derivadas.</p>
   </header>
 
+  <section class="card guide" aria-label="Recorrido guiado">
+    <div class="steps" role="tablist" aria-label="Pasos del recorrido" id="gSteps"></div>
+    <div class="gbody" aria-live="polite">
+      <p class="gk" id="gK">Paso 1 de 6</p>
+      <h2 id="gT">—</h2>
+      <p class="gx" id="gX">—</p>
+    </div>
+    <div class="gnav">
+      <button type="button" id="gPrev">← Anterior</button>
+      <button type="button" class="primary" id="gNext">Siguiente →</button>
+    </div>
+  </section>
+
   <section class="tiles opt" aria-label="Solución óptima por mínimos cuadrados">
     <div class="tile"><span class="k">Pendiente óptima a*</span><span class="v" id="oA">—</span><span class="k">°C por km de altitud</span></div>
     <div class="tile"><span class="k">Intercepto óptimo b*</span><span class="v" id="oB">—</span><span class="k">°C al nivel del mar</span></div>
@@ -152,6 +185,7 @@ tfoot td { font-weight: 600; border-bottom: 0; }
         <label class="check"><input type="checkbox" id="chkSq" checked> Ver cuadrados eᵢ²</label>
       </div>
       <p class="eq" id="eqLine">T = −6,1677·h + 29,9003</p>
+      <p class="plain"><b>En palabras:</b> cada punto es una ciudad. Más a la derecha = más alta; más abajo = más fría. La línea azul es una recta de prueba y las rayas naranjas, cuánto se equivoca en cada ciudad. Los cuadrados son esos errores al cuadrado: <b>sumando sus áreas sale S, el error total</b>.</p>
       <canvas id="cData" height="380" aria-label="Dispersión de temperatura contra altitud con la recta actual, sus residuos y los cuadrados de los residuos"></canvas>
       <div class="tip" id="tip" role="status"></div>
       <div class="legend"><span style="--c:var(--ink)">Estación IDEAM</span><span class="ln" style="--c:var(--accent)">Recta actual</span><span class="sq" style="--c:var(--hot)">eᵢ²: el área total es S</span></div>
@@ -165,7 +199,7 @@ tfoot td { font-weight: 600; border-bottom: 0; }
           <button type="button" role="tab" id="tab3d" aria-selected="false" aria-controls="c3d">Superficie 3D</button>
         </div>
       </div>
-      <p class="sub" id="viewHint">Haz clic o arrastra para elegir (a, b). La flecha −∇S apunta hacia donde S baja más rápido y es perpendicular a la curva de nivel.</p>
+      <p class="plain" id="viewHint"><b>En palabras:</b> cada punto de este mapa es una recta distinta. El color dice cuánto se equivoca: <b>más oscuro = menos error</b>. El punto verde es la mejor recta y la flecha (−∇S) apunta cuesta abajo, hacia menos error. Haz clic en el mapa para probar otra recta.</p>
       <canvas id="cMap" height="380" tabindex="0" aria-label="Curvas de nivel de S en el plano a-b; flechas del teclado mueven el punto"></canvas>
       <canvas id="c3d" height="380" hidden aria-label="Superficie z = S(a, b), arrastra para rotar"></canvas>
       <div class="legend" id="legMap"><span style="--c:var(--hot)">Punto (a, b)</span><span style="--c:var(--good)">Mínimo (a*, b*)</span><span class="ln" style="--c:var(--ink)">−∇S</span><span class="ln" style="--c:var(--path)">Descenso por gradiente</span></div>
@@ -174,9 +208,10 @@ tfoot td { font-weight: 600; border-bottom: 0; }
   </div>
 
   <section class="card controls" aria-label="Controles">
+    <p class="read" id="read" aria-live="polite">—</p>
     <div class="slider">
       <label for="sa">Pendiente a (°C/km) <output id="oa" for="sa">—</output></label>
-      <input type="range" id="sa" min="-8" max="-4.5" step="0.01" value="-4.8">
+      <input type="range" id="sa" min="-8" max="-4.5" step="0.01" value="-7.5">
     </div>
     <div class="slider">
       <label for="sb">Intercepto b (°C) <output id="ob" for="sb">—</output></label>
@@ -191,30 +226,33 @@ tfoot td { font-weight: 600; border-bottom: 0; }
   </section>
 
   <section class="tiles" aria-label="Medidas de la recta actual">
-    <div class="tile"><span class="k">S(a, b) · suma de cuadrados</span><span class="v" id="vS">—</span><span class="pill" id="pill">—</span></div>
-    <div class="tile"><span class="k">RMSE = √(S / n)</span><span class="v" id="vRMSE">—</span><span class="k">°C</span></div>
-    <div class="tile"><span class="k">R² = 1 − S / SST</span><span class="v" id="vR2">—</span><span class="k" id="vR2t" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</span></div>
-    <div class="tile"><span class="k">‖∇S‖</span><span class="v" id="vGn">—</span><span class="k">0 solo en el punto crítico</span></div>
+    <div class="tile"><span class="k"><b>Error total</b> · S(a, b)</span><span class="v" id="vS">—</span><span class="pill" id="pill">—</span></div>
+    <div class="tile"><span class="k"><b>Error promedio</b> · RMSE</span><span class="v" id="vRMSE">—</span><span class="k">°C por ciudad</span></div>
+    <div class="tile"><span class="k"><b>¿Cuánto explica la altitud?</b> · R²</span><span class="v" id="vR2">—</span><span class="k" id="vR2t" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</span></div>
+    <div class="tile"><span class="k"><b>Inclinación del tazón</b> · ‖∇S‖</span><span class="v" id="vGn">—</span><span class="k">vale 0 solo en el fondo</span></div>
   </section>
 
   <section class="card" aria-labelledby="t3">
     <h2 id="t3"><span class="n">03</span><span>El cálculo, en vivo</span></h2>
-    <p class="sub">Los mismos pasos de la derivación a mano, evaluados en la recta que tienes seleccionada. En <span style="color:var(--hot);font-weight:600">naranja</span>, los valores que cambian.</p>
+    <p class="plain"><b>En palabras:</b> son los mismos pasos que hicimos a mano en el informe, con los números reales. Los valores en <span style="color:var(--hot);font-weight:600">naranja</span> cambian cuando mueves la recta.</p>
     <div class="grid3">
       <div class="math">
         <h3>1. La función y sus derivadas parciales</h3>
+        <p class="note"><b>Idea:</b> las derivadas dicen hacia dónde sube el error. En el fondo del tazón valen 0.</p>
         <div class="m" id="mS"></div>
         <div class="m" id="mGrad"></div>
         <p class="note">Vector gradiente: ∇S = <span id="mGv" class="m live"></span></p>
       </div>
       <div class="math">
         <h3>2. ∇S = 0 → ecuaciones normales</h3>
+        <p class="note"><b>Idea:</b> igualamos las dos derivadas a 0 y resolvemos el sistema 2×2. Eso da la mejor recta.</p>
         <div class="m" id="mNorm"></div>
         <div class="m" id="mSol"></div>
         <p class="note">Determinante D = nΣh² − (Σh)² = <span id="mD" class="m"></span> ≠ 0: hay una única solución (regla de Cramer).</p>
       </div>
       <div class="math">
         <h3>3. Hessiano: ¿mínimo o no?</h3>
+        <p class="note"><b>Idea:</b> comprueba que el punto es el fondo del tazón y no una cima ni una silla.</p>
         <div class="m" id="mH"></div>
         <div class="m" id="mEig"></div>
         <p class="note" id="mHnote"></p>
@@ -225,11 +263,13 @@ tfoot td { font-weight: 600; border-bottom: 0; }
   <div class="grid">
     <section class="card" aria-labelledby="t4">
       <h2 id="t4"><span class="n">04</span><span>Traza con b fijo: z = S(a, <span id="tb">—</span>)</span></h2>
+      <p class="plain"><b>En palabras:</b> cortamos el tazón dejando fijo el intercepto b. Sale una parábola; la rayita naranja es su tangente y su inclinación es ∂S/∂a.</p>
       <canvas id="cTa" height="210" aria-label="Traza de S como función de a con b fijo"></canvas>
       <div class="legend"><span class="ln" style="--c:var(--accent)">Traza actual</span><span class="ln" style="--c:var(--line)">Traza por el mínimo</span></div>
     </section>
     <section class="card" aria-labelledby="t5">
       <h2 id="t5"><span class="n">05</span><span>Traza con a fijo: z = S(<span id="ta">—</span>, b)</span></h2>
+      <p class="plain"><b>En palabras:</b> ahora dejamos fija la pendiente a. Otra parábola; en el mínimo la tangente queda horizontal (∂S/∂b = 0).</p>
       <canvas id="cTb" height="210" aria-label="Traza de S como función de b con a fijo"></canvas>
       <div class="legend"><span class="ln" style="--c:var(--teal)">Traza actual</span><span class="ln" style="--c:var(--line)">Traza por el mínimo</span></div>
     </section>
@@ -317,7 +357,7 @@ tfoot td { font-weight: 600; border-bottom: 0; }
     return `rgba(${(v>>16)&255},${(v>>8)&255},${v&255},${al})`; };
 
   // ================= Estado =================
-  let a = -4.8, b = 26, path = [], anim = null, gdIter = 0, view = "map";
+  let a = -7.5, b = 26, path = [], anim = null, gdIter = 0, view = "map";
   let yaw = -0.62, pitch = 0.42;
 
   // ================= Utilidades de canvas =================
@@ -542,9 +582,9 @@ tfoot td { font-weight: 600; border-bottom: 0; }
     view = v;
     $("tabMap").setAttribute("aria-selected", v === "map"); $("tab3d").setAttribute("aria-selected", v === "3d");
     cMap.hidden = v !== "map"; c3d.hidden = v !== "3d"; $("legMap").hidden = v !== "map"; $("leg3d").hidden = v !== "3d";
-    $("viewHint").textContent = v === "map"
-      ? "Haz clic o arrastra para elegir (a, b). La flecha −∇S apunta hacia donde S baja más rápido y es perpendicular a la curva de nivel."
-      : "Paraboloide elíptico z = S(a, b). Las curvas azul y verde azulado son las trazas que pasan por tu punto; ambas son parábolas que abren hacia arriba.";
+    $("viewHint").innerHTML = v === "map"
+      ? "<b>En palabras:</b> cada punto de este mapa es una recta distinta. El color dice cuánto se equivoca: <b>más oscuro = menos error</b>. El punto verde es la mejor recta y la flecha (−∇S) apunta cuesta abajo, hacia menos error. Haz clic en el mapa para probar otra recta."
+      : "<b>En palabras:</b> es el mismo mapa en relieve. La altura es el error, así que la superficie es un tazón y <b>la mejor recta es el fondo</b> (punto verde). Arrastra para girarlo. Las curvas de colores son cortes del tazón por tu punto.";
     drawViews();
   }
   $("tabMap").addEventListener("click", () => setView("map"));
@@ -643,6 +683,11 @@ tfoot td { font-weight: 600; border-bottom: 0; }
     const pill = $("pill"), near = s - Smin < 0.005;
     pill.textContent = near ? "En el mínimo: ∇S ≈ 0" : `+${fmt(s - Smin)} sobre el mínimo`;
     pill.classList.toggle("ok", near);
+    const rd = $("read");
+    rd.classList.toggle("ok", near);
+    rd.textContent = near
+      ? `¡Esta es la mejor recta posible! Se equivoca en promedio ${fmt(Math.sqrt(s/n),2)} °C por ciudad; ninguna otra recta lo hace mejor.`
+      : `Tu recta se equivoca en promedio ${fmt(Math.sqrt(s/n),2)} °C por ciudad. La mejor posible: ${fmt(Math.sqrt(Smin/n),2)} °C. Sigue la flecha del mapa o pulsa «Ir al mínimo».`;
     liveMath(); table(); predict();
     drawData(); drawViews();
     drawTrace($("cTa"), true); drawTrace($("cTb"), false);
@@ -681,7 +726,7 @@ tfoot td { font-weight: 600; border-bottom: 0; }
     anim = requestAnimationFrame(step);
   }
   $("btnMin").addEventListener("click", () => animateTo(aStar, bStar, "Solución de las ecuaciones normales: aquí ∇S = (0, 0)."));
-  $("btnReset").addEventListener("click", () => animateTo(-4.8, 26, "Punto de partida (−4,8; 26): una recta razonable, pero no la mejor."));
+  $("btnReset").addEventListener("click", () => animateTo(-7.5, 26, "Punto de partida (−7,5; 26): una recta razonable, pero no la mejor."));
   $("btnGD").addEventListener("click", () => {
     stop(); path = [[a,b]]; gdIter = 0;
     const eta = 1/l2;   // paso η = 1/λ_max: garantiza convergencia en una cuadrática
@@ -693,6 +738,46 @@ tfoot td { font-weight: 600; border-bottom: 0; }
       anim = done() ? null : requestAnimationFrame(step); report(); update(false); };
     anim = requestAnimationFrame(step);
   });
+
+  // ================= Recorrido guiado =================
+  const card = id => $(id).closest(".card");
+  const STEPS = [
+    { n: "Los datos", t: "13 ciudades: más alto, más frío",
+      x: "Cada punto negro es una ciudad de Colombia con su altitud y su temperatura media (datos del IDEAM). Se ve un patrón claro: mientras más alta la ciudad, más fría, y casi en línea recta. Queremos encontrar esa recta.",
+      go: () => { chkSq.checked = false; animateTo(-7.5, 26, ""); }, f: () => [card("t1")] },
+    { n: "El error", t: "¿Qué tan buena es una recta?",
+      x: "La línea azul es una recta de prueba. Las rayas naranjas son lo que se equivoca en cada ciudad. Elevamos cada error al cuadrado (los cuadritos) y los sumamos: eso es S, el error total. La mejor recta es la que tiene el S más pequeño.",
+      go: () => { chkSq.checked = true; drawData(); }, f: () => [card("t1"), $("vS").closest(".tile")] },
+    { n: "El mapa del error", t: "Cada recta es un punto (a, b)",
+      x: "Una recta queda definida por dos números: la pendiente a y el intercepto b. Por eso podemos dibujar todas las rectas como puntos de un mapa, coloreado según su error. Haz clic en distintos lugares del mapa y mira cómo cambia la recta de la izquierda.",
+      go: () => setView("map"), f: () => [card("t2"), card("t1")] },
+    { n: "Bajar al mínimo", t: "Siguiendo la flecha llegamos al fondo",
+      x: "La flecha −∇S (menos el gradiente) siempre apunta cuesta abajo, hacia menos error. Si damos muchos pasos pequeños siguiéndola, llegamos al punto verde: la mejor recta. Esto se llama descenso por gradiente.",
+      go: () => { setView("map"); a = -7.5; b = 26; update(false); setTimeout(() => $("btnGD").click(), 450); }, f: () => [card("t2"), $("read")] },
+    { n: "Comprobarlo", t: "El cálculo confirma el resultado",
+      x: "En el fondo del tazón el gradiente vale cero: ∇S = (0, 0). Resolviendo esas dos ecuaciones a mano sale a* = −6,1677 y b* = 29,9003, el mismo punto. El Hessiano (det H > 0) garantiza que es un mínimo, y además global.",
+      go: () => { setView("3d"); animateTo(aStar, bStar, ""); }, f: () => [card("t3"), card("t2")] },
+    { n: "La respuesta", t: "Cada 1000 m, unos 6,2 °C menos",
+      x: "La mejor recta es T = −6,17·h + 29,90. Explica el 97,9 % de la variación (R²) y se equivoca en promedio solo 0,82 °C. Sirve para estimar la temperatura de cualquier lugar según su altitud: prueba con la barra de abajo.",
+      go: () => { setView("map"); animateTo(aStar, bStar, ""); }, f: () => [card("t6"), $("oA").closest(".tiles")] },
+  ];
+  let gi = 0;
+  const gSteps = $("gSteps");
+  STEPS.forEach((st, i) => {
+    const bt = document.createElement("button"); bt.type = "button"; bt.setAttribute("role", "tab");
+    bt.innerHTML = `<span class="sn">${i+1}</span>${st.n}`; bt.addEventListener("click", () => goStep(i)); gSteps.appendChild(bt);
+  });
+  function goStep(i, run = true) {
+    gi = clamp(i, 0, STEPS.length - 1); const st = STEPS[gi];
+    [...gSteps.children].forEach((bt, k) => { bt.setAttribute("aria-selected", k === gi); if (k < gi) bt.classList.add("seen"); });
+    $("gK").textContent = `Paso ${gi+1} de ${STEPS.length}`; $("gT").textContent = st.t; $("gX").textContent = st.x;
+    $("gPrev").disabled = gi === 0; $("gNext").textContent = gi === STEPS.length - 1 ? "Volver al inicio ↺" : "Siguiente →";
+    document.querySelectorAll(".focus").forEach(e => e.classList.remove("focus"));
+    if (run) { stop(); st.go(); const fs = st.f(); fs.forEach(e => e.classList.add("focus"));
+      fs[0].scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" }); }
+  }
+  $("gPrev").addEventListener("click", () => goStep(gi - 1));
+  $("gNext").addEventListener("click", () => goStep(gi === STEPS.length - 1 ? 0 : gi + 1));
 
   // ================= Tema =================
   function applyTheme() {
@@ -709,7 +794,7 @@ tfoot td { font-weight: 600; border-bottom: 0; }
   matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyTheme);
 
   let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { mapImg = null; update(false); }, 120); });
-  readColors(); staticMath(); applyTheme();
+  readColors(); staticMath(); applyTheme(); goStep(0, false);
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => update(false));
 })();
 </script>
