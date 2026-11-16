@@ -1,0 +1,29 @@
+digraph G {
+  graph [rankdir=TB, bgcolor="white", fontname="Helvetica", nodesep=0.3, ranksep=0.32, dpi=200];
+  node  [shape=box, style="rounded,filled", fillcolor="#eef4fc", color="#2a78d6", fontname="Helvetica", fontsize=11, penwidth=1.4, width=3.6];
+  edge  [color="#52514e", arrowsize=0.7];
+  inicio [label="INICIO", shape=oval, fillcolor="#2a78d6", fontcolor="white", width=1.6];
+  leer   [label="Leer CSV: ciudad, altitud (m), temperatura (°C)\nx ← altitud / 1000 ;  y ← temperatura ;  n ← 13", shape=parallelogram, width=4.4];
+  ini    [label="Σx ← 0, Σy ← 0, Σx² ← 0, Σxy ← 0"];
+  ciclo  [label="¿Quedan datos (xᵢ, yᵢ)?", shape=diamond, fillcolor="#fff3ec", color="#eb6834", width=2.8];
+  acum   [label="Σx += xᵢ ;  Σy += yᵢ\nΣx² += xᵢ² ;  Σxy += xᵢ·yᵢ"];
+  det    [label="D ← n·Σx² − (Σx)²"];
+  dcero  [label="¿D = 0?", shape=diamond, fillcolor="#fff3ec", color="#eb6834", width=1.8];
+  error  [label="Error: todos los x iguales\n(no hay recta única)", fillcolor="#fdeaea", color="#e34948"];
+  ab     [label="a* ← (n·Σxy − Σx·Σy) / D\nb* ← (Σy − a*·Σx) / n"];
+  smin   [label="eᵢ ← yᵢ − (a*·xᵢ + b*)\nS_min ← Σ eᵢ²"];
+  hess   [label="H ← [[2Σx², 2Σx], [2Σx, 2n]]\n¿H₁₁ > 0 y det(H) > 0?  →  mínimo"];
+  calidad[label="RMSE ← √(S_min / n) ;  R² ← 1 − S_min / Σ(yᵢ − ȳ)²"];
+  comp   [label="Comparar con numpy.polyfit y scipy.linregress"];
+  graf   [label="Gráficas: dispersión, rectas, superficie,\ntrazas, curvas de nivel, residuos, histograma"];
+  fin    [label="FIN", shape=oval, fillcolor="#2a78d6", fontcolor="white", width=1.6];
+  inicio -> leer -> ini -> ciclo;
+  ciclo -> acum [label=" sí", fontsize=10];
+  acum -> ciclo;
+  ciclo -> det [label=" no", fontsize=10];
+  det -> dcero;
+  dcero -> error [label=" sí", fontsize=10];
+  dcero -> ab [label=" no", fontsize=10];
+  ab -> smin -> hess -> calidad -> comp -> graf -> fin;
+  error -> fin;
+}

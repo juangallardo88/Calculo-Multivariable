@@ -1,0 +1,14 @@
+ciudad,estacion,altitud_m,temperatura_C,periodo
+Santa Marta,Aeropuerto Simón Bolívar,4,28.6,1991-2020
+Neiva,Aeropuerto Benito Salas,439,27.8,1981-2010
+Ibagué,Aeropuerto Perales,928,24.1,1991-2020
+Cali,Aeropuerto Alfonso Bonilla Aragón,964,23.9,1991-2020
+Bucaramanga,Universidad Industrial de Santander,1018,23.1,1981-2010
+Pereira,Aeropuerto Matecaña,1342,21.5,1991-2020
+Medellín,Aeropuerto Olaya Herrera,1490,23.1,1991-2020
+Popayán,Aeropuerto Guillermo León Valencia,1749,19.6,1991-2020
+Manizales,Aeropuerto La Nubia,2058,17.0,1981-2010
+Bogotá,Aeropuerto El Dorado,2547,13.9,1991-2020
+Tunja,UPTC,2690,13.1,1981-2010
+Pasto,Obonuco,2710,13.1,1991-2020
+Ipiales,Aeropuerto San Luis,2961,11.0,1981-2010

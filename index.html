@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La mejor recta como un problema de optimización</title>
+<meta name="description" content="Laboratorio interactivo: regresión lineal por mínimos cuadrados como minimización de S(a, b). Proyecto de Cálculo Multivariable, UCC 2026B.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Laboratorio de una página: datos ↔ superficie de error ↔ cálculo, conectados por un único punto (a, b) */
+  --ink: #16202e;
+  --paper: #f4f2ec;
+  --panel: #fdfcf9;
+  --sunk: #f0ede5;
+  --line: #d9d5ca;
+  --muted: #5b5850;
+  --accent: #1d5aa6;
+  --hot: #d9541f;
+  --good: #1b7f5a;
+  --path: #6a4fd0;
+  --teal: #0e7c86;
+  --pill-bg: #fbe7dd; --pill-ink: #9a3412;
+  --ok-bg: #dcf1e6;   --ok-ink: #1b7f5a;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #e8ecf2; --paper: #11161e; --panel: #19212c; --sunk: #141b24; --line: #2e3a4a; --muted: #a3adbb;
+    --accent: #6ea8f0; --hot: #f08a5d; --good: #4cc893; --path: #a58cff; --teal: #4fc6cf;
+    --pill-bg: #3a2318; --pill-ink: #f5b897; --ok-bg: #16352a; --ok-ink: #7fe0b5;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #e8ecf2; --paper: #11161e; --panel: #19212c; --sunk: #141b24; --line: #2e3a4a; --muted: #a3adbb;
+  --accent: #6ea8f0; --hot: #f08a5d; --good: #4cc893; --path: #a58cff; --teal: #4fc6cf;
+  --pill-bg: #3a2318; --pill-ink: #f5b897; --ok-bg: #16352a; --ok-ink: #7fe0b5;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 28px 20px 48px; display: flex; flex-direction: column; gap: 22px; }
+header { display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; align-items: end; }
+.kicker { font-size: 13px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0; }
+h1 { font-size: clamp(26px, 3.2vw, 40px); line-height: 1.12; margin: 0; text-wrap: balance; }
+.lead { margin: 0; max-width: 78ch; color: var(--muted); font-size: 17px; }
+.theme { align-self: start; }
+h2 { font-size: 17px; margin: 0; display: flex; gap: 10px; align-items: baseline; }
+h2 .n { font-family: var(--font-num); color: var(--accent); font-size: 15px; }
+h3 { font-size: 15px; margin: 0; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; position: relative; }
+.sub { margin: 0; font-size: 14px; color: var(--muted); }
+canvas { width: 100%; display: block; border-radius: 6px; touch-action: none; }
+#cMap { cursor: crosshair; }
+#c3d { cursor: grab; }
+#c3d:active { cursor: grabbing; }
+.eq { font-family: var(--font-num); font-size: 18px; font-weight: 600; margin: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+.check { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; font-weight: 500; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--hot); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; padding: 6px 14px; font-size: 14px; background: transparent; color: var(--muted); }
+.seg button[aria-selected="true"] { background: var(--accent); color: var(--panel); }
+.controls { display: grid; grid-template-columns: 1fr 1fr auto; gap: 16px 24px; align-items: end; }
+.slider { display: flex; flex-direction: column; gap: 6px; }
+.slider label { display: flex; justify-content: space-between; font-size: 15px; font-weight: 500; gap: 8px; }
+.slider output { font-family: var(--font-num); font-weight: 600; font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
+.buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+button { font: inherit; font-weight: 600; font-size: 15px; padding: 10px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--panel); color: var(--accent); cursor: pointer; }
+button.primary { background: var(--accent); color: var(--panel); }
+button:hover { filter: brightness(1.06); }
+button:focus-visible, input:focus-visible, canvas:focus-visible, summary:focus-visible { outline: 3px solid var(--hot); outline-offset: 2px; }
+.status { grid-column: 1 / -1; font-size: 14px; color: var(--muted); margin: 0; min-height: 21px; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tile .k { font-size: 13px; color: var(--muted); font-weight: 500; }
+.tile .v { font-family: var(--font-num); font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tiles.opt .tile { background: var(--sunk); }
+.tiles.opt .v { font-size: 22px; }
+.pill { align-self: flex-start; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--pill-bg); color: var(--pill-ink); margin-top: 4px; }
+.pill.ok { background: var(--ok-bg); color: var(--ok-ink); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+.legend span.sq::before { border-radius: 2px; opacity: .55; }
+.legend span.ln::before { height: 3px; border-radius: 2px; vertical-align: 3px; }
+/* Bloques de cálculo */
+.math { background: var(--sunk); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.m { font-family: var(--font-num); font-size: 13.5px; line-height: 1.7; overflow-x: auto; white-space: nowrap; }
+.m .live { color: var(--hot); font-weight: 600; }
+.m .ok { color: var(--good); font-weight: 600; }
+.mat { display: inline-grid; grid-template-columns: auto auto; gap: 0 16px; padding: 2px 10px; border-left: 2px solid var(--ink); border-right: 2px solid var(--ink); border-radius: 6px; vertical-align: middle; text-align: right; font-family: var(--font-num); }
+.vec { display: inline-grid; grid-template-columns: auto; padding: 2px 10px; border-left: 2px solid var(--ink); border-right: 2px solid var(--ink); border-radius: 6px; vertical-align: middle; text-align: right; font-family: var(--font-num); }
+.note { font-size: 14px; color: var(--muted); margin: 0; white-space: normal; }
+/* Tooltip */
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--panel); font-size: 13px; line-height: 1.4; padding: 8px 10px; border-radius: 8px; opacity: 0; transition: opacity .12s; white-space: nowrap; z-index: 2; }
+.tip b { font-weight: 600; }
+.tip .mono { font-family: var(--font-num); }
+/* Predicción */
+.pred { display: grid; grid-template-columns: 1fr auto; gap: 8px 20px; align-items: center; }
+.pred .big { font-family: var(--font-num); font-size: 34px; font-weight: 600; }
+/* Tabla */
+details { border-top: 1px solid var(--line); padding-top: 8px; }
+summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 600; color: var(--muted); font-size: 13px; }
+td.mono { font-family: var(--font-num); }
+tfoot td { font-weight: 600; border-bottom: 0; }
+.foot { font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: 14px; }
+@media (max-width: 960px) {
+  .grid, .grid3 { grid-template-columns: 1fr; }
+  .controls { grid-template-columns: 1fr; }
+  .tiles { grid-template-columns: 1fr 1fr; }
+  header { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <p class="kicker">Proyecto de Cálculo Multivariable · UCC 2026B</p>
+      <h1>La mejor recta como un problema de optimización</h1>
+    </div>
+    <button class="theme" id="btnTheme" type="button" aria-label="Cambiar entre tema claro y oscuro">Tema oscuro</button>
+    <p class="lead" style="grid-column:1/-1">¿Cuánto baja la temperatura al subir en Colombia? Ajustamos T = a·h + b a 13 estaciones del IDEAM minimizando S(a, b) = Σ(Tᵢ − a·hᵢ − b)². Cada recta es un punto (a, b): muévelo y verás, al mismo tiempo, la recta, la superficie de error y las derivadas.</p>
+  </header>
+
+  <section class="tiles opt" aria-label="Solución óptima por mínimos cuadrados">
+    <div class="tile"><span class="k">Pendiente óptima a*</span><span class="v" id="oA">—</span><span class="k">°C por km de altitud</span></div>
+    <div class="tile"><span class="k">Intercepto óptimo b*</span><span class="v" id="oB">—</span><span class="k">°C al nivel del mar</span></div>
+    <div class="tile"><span class="k">Coeficiente R²</span><span class="v" id="oR2">—</span><span class="k" id="oR2t">—</span></div>
+    <div class="tile"><span class="k">RMSE</span><span class="v" id="oRMSE">—</span><span class="k">error típico de predicción</span></div>
+  </section>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="t1">
+      <div class="row">
+        <h2 id="t1"><span class="n">01</span><span>Datos y recta</span></h2>
+        <label class="check"><input type="checkbox" id="chkSq" checked> Ver cuadrados eᵢ²</label>
+      </div>
+      <p class="eq" id="eqLine">T = −6,1677·h + 29,9003</p>
+      <canvas id="cData" height="380" aria-label="Dispersión de temperatura contra altitud con la recta actual, sus residuos y los cuadrados de los residuos"></canvas>
+      <div class="tip" id="tip" role="status"></div>
+      <div class="legend"><span style="--c:var(--ink)">Estación IDEAM</span><span class="ln" style="--c:var(--accent)">Recta actual</span><span class="sq" style="--c:var(--hot)">eᵢ²: el área total es S</span></div>
+    </section>
+
+    <section class="card" aria-labelledby="t2">
+      <div class="row">
+        <h2 id="t2"><span class="n">02</span><span>Función de error S(a, b)</span></h2>
+        <div class="seg" role="tablist" aria-label="Vista de la función de error">
+          <button type="button" role="tab" id="tabMap" aria-selected="true" aria-controls="cMap">Curvas de nivel</button>
+          <button type="button" role="tab" id="tab3d" aria-selected="false" aria-controls="c3d">Superficie 3D</button>
+        </div>
+      </div>
+      <p class="sub" id="viewHint">Haz clic o arrastra para elegir (a, b). La flecha −∇S apunta hacia donde S baja más rápido y es perpendicular a la curva de nivel.</p>
+      <canvas id="cMap" height="380" tabindex="0" aria-label="Curvas de nivel de S en el plano a-b; flechas del teclado mueven el punto"></canvas>
+      <canvas id="c3d" height="380" hidden aria-label="Superficie z = S(a, b), arrastra para rotar"></canvas>
+      <div class="legend" id="legMap"><span style="--c:var(--hot)">Punto (a, b)</span><span style="--c:var(--good)">Mínimo (a*, b*)</span><span class="ln" style="--c:var(--ink)">−∇S</span><span class="ln" style="--c:var(--path)">Descenso por gradiente</span></div>
+      <div class="legend" id="leg3d" hidden><span style="--c:var(--hot)">(a, b, S)</span><span style="--c:var(--good)">Mínimo</span><span class="ln" style="--c:var(--accent)">Traza b = b actual</span><span class="ln" style="--c:var(--teal)">Traza a = a actual</span></div>
+    </section>
+  </div>
+
+  <section class="card controls" aria-label="Controles">
+    <div class="slider">
+      <label for="sa">Pendiente a (°C/km) <output id="oa" for="sa">—</output></label>
+      <input type="range" id="sa" min="-10" max="-2.3" step="0.01" value="-3">
+    </div>
+    <div class="slider">
+      <label for="sb">Intercepto b (°C) <output id="ob" for="sb">—</output></label>
+      <input type="range" id="sb" min="23" max="37" step="0.01" value="25">
+    </div>
+    <div class="buttons">
+      <button class="primary" id="btnMin" type="button">Ir al mínimo</button>
+      <button id="btnGD" type="button">Descenso por gradiente</button>
+      <button id="btnReset" type="button">Empezar lejos</button>
+    </div>
+    <p class="status" id="status" aria-live="polite"></p>
+  </section>
+
+  <section class="tiles" aria-label="Medidas de la recta actual">
+    <div class="tile"><span class="k">S(a, b) · suma de cuadrados</span><span class="v" id="vS">—</span><span class="pill" id="pill">—</span></div>
+    <div class="tile"><span class="k">RMSE = √(S / n)</span><span class="v" id="vRMSE">—</span><span class="k">°C</span></div>
+    <div class="tile"><span class="k">R² = 1 − S / SST</span><span class="v" id="vR2">—</span><span class="k" id="vR2t">—</span></div>
+    <div class="tile"><span class="k">‖∇S‖</span><span class="v" id="vGn">—</span><span class="k">0 solo en el punto crítico</span></div>
+  </section>
+
+  <section class="card" aria-labelledby="t3">
+    <h2 id="t3"><span class="n">03</span><span>El cálculo, en vivo</span></h2>
+    <p class="sub">Los mismos pasos de la derivación a mano, evaluados en la recta que tienes seleccionada. En <span style="color:var(--hot);font-weight:600">naranja</span>, los valores que cambian.</p>
+    <div class="grid3">
+      <div class="math">
+        <h3>1. La función y sus derivadas parciales</h3>
+        <div class="m" id="mS"></div>
+        <div class="m" id="mGrad"></div>
+        <p class="note">Vector gradiente: ∇S = <span id="mGv" class="m live"></span></p>
+      </div>
+      <div class="math">
+        <h3>2. ∇S = 0 → ecuaciones normales</h3>
+        <div class="m" id="mNorm"></div>
+        <div class="m" id="mSol"></div>
+        <p class="note">Determinante D = nΣh² − (Σh)² = <span id="mD" class="m"></span> ≠ 0: hay una única solución (regla de Cramer).</p>
+      </div>
+      <div class="math">
+        <h3>3. Hessiano: ¿mínimo o no?</h3>
+        <div class="m" id="mH"></div>
+        <div class="m" id="mEig"></div>
+        <p class="note" id="mHnote"></p>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="t4">
+      <h2 id="t4"><span class="n">04</span><span>Traza con b fijo: z = S(a, <span id="tb">—</span>)</span></h2>
+      <canvas id="cTa" height="210" aria-label="Traza de S como función de a con b fijo"></canvas>
+      <div class="legend"><span class="ln" style="--c:var(--accent)">Traza actual</span><span class="ln" style="--c:var(--line)">Traza por el mínimo</span></div>
+    </section>
+    <section class="card" aria-labelledby="t5">
+      <h2 id="t5"><span class="n">05</span><span>Traza con a fijo: z = S(<span id="ta">—</span>, b)</span></h2>
+      <canvas id="cTb" height="210" aria-label="Traza de S como función de b con a fijo"></canvas>
+      <div class="legend"><span class="ln" style="--c:var(--teal)">Traza actual</span><span class="ln" style="--c:var(--line)">Traza por el mínimo</span></div>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="t6">
+    <h2 id="t6"><span class="n">06</span><span>Usar el modelo: predecir la temperatura</span></h2>
+    <div class="pred">
+      <div class="slider">
+        <label for="sh">Altitud de un lugar sin estación <output id="oh" for="sh">—</output></label>
+        <input type="range" id="sh" min="0" max="3500" step="10" value="1900">
+      </div>
+      <div><span class="k sub">Temperatura media estimada</span><br><span class="big" id="pT">—</span></div>
+    </div>
+    <p class="sub" id="pNote"></p>
+    <details>
+      <summary>Ver tabla de datos y residuos de la recta actual</summary>
+      <table>
+        <thead><tr><th>Ciudad</th><th>h (km)</th><th>T (°C)</th><th>T̂ = a·h + b</th><th>e = T − T̂</th><th>e²</th></tr></thead>
+        <tbody id="tbody"></tbody>
+        <tfoot><tr><td>Suma</td><td></td><td></td><td></td><td class="mono" id="sumE"></td><td class="mono" id="sumE2"></td></tr></tfoot>
+      </table>
+    </details>
+  </section>
+
+  <footer class="foot">
+    <span>Datos: normales climatológicas del IDEAM (1991–2020; cinco estaciones con 1981–2010), 13 estaciones entre 4 y 2961 m de altitud.</span>
+    <span>Integrantes: Juan Manuel Gallardo Valenzuela, David Esteban Campiño Igua, Jaider Julian Chindoy Caicedo, Santiago Alejandro Campoverde, Manuel Alejandro Villareal Gil.</span>
+    <span>Docente: M.Sc. Alejandro Molina · Universidad Cooperativa de Colombia · San Juan de Pasto, 2026.</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // ================= Datos: altitud h en km, temperatura media T en °C =================
+  const D = [
+    ["Santa Marta",0.004,28.6],["Neiva",0.439,27.8],["Ibagué",0.928,24.1],["Cali",0.964,23.9],
+    ["Bucaramanga",1.018,23.1],["Pereira",1.342,21.5],["Medellín",1.490,23.1],["Popayán",1.749,19.6],
+    ["Manizales",2.058,17.0],["Bogotá",2.547,13.9],["Tunja",2.690,13.1],["Pasto",2.710,13.1],["Ipiales",2.961,11.0]
+  ];
+  const n = D.length;
+
+  // ================= Sumas y solución analítica (igual que el desarrollo a mano) =================
+  let Sx=0, Sy=0, Sxx=0, Sxy=0, Syy=0;
+  for (const [,x,y] of D) { Sx+=x; Sy+=y; Sxx+=x*x; Sxy+=x*y; Syy+=y*y; }
+  const Det = n*Sxx - Sx*Sx;                       // determinante del sistema normal
+  const aStar = (n*Sxy - Sx*Sy)/Det;               // Cramer
+  const bStar = (Sy - aStar*Sx)/n;
+  const yBar = Sy/n, SST = Syy - n*yBar*yBar;
+
+  // S(a,b) desarrollada: Σh²·a² + 2Σh·ab + n·b² − 2Σhy·a − 2Σy·b + Σy²
+  const S    = (a,b) => Sxx*a*a + 2*Sx*a*b + n*b*b - 2*Sxy*a - 2*Sy*b + Syy;
+  const grad = (a,b) => [2*Sxx*a + 2*Sx*b - 2*Sxy, 2*Sx*a + 2*n*b - 2*Sy];
+  const Smin = S(aStar, bStar);
+  // Hessiano constante H = [[2Σh², 2Σh],[2Σh, 2n]]
+  const H11 = 2*Sxx, H12 = 2*Sx, H22 = 2*n, detH = H11*H22 - H12*H12;
+  const tr = H11 + H22, disc = Math.sqrt(tr*tr - 4*detH);
+  const l1 = (tr - disc)/2, l2 = (tr + disc)/2;
+
+  const A0=-10, A1=-2.3, B0=23, B1=37;
+  const $ = id => document.getElementById(id);
+  const fmt = (v,d=2) => (Math.abs(v) < 0.5*Math.pow(10,-d) ? 0 : v)
+      .toLocaleString("es-CO",{minimumFractionDigits:d, maximumFractionDigits:d}).replace("-", "−");
+  const sg = (v,d=2) => (v < 0 ? " − " : " + ") + fmt(Math.abs(v), d);   // término con signo
+  const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+
+  // ================= Tema y colores =================
+  let C = {};
+  const isDark = () => {
+    const t = document.documentElement.dataset.theme;
+    return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  };
+  function readColors() {
+    const cs = getComputedStyle(document.documentElement), g = k => cs.getPropertyValue(k).trim();
+    C = { ink:g("--ink"), panel:g("--panel"), line:g("--line"), muted:g("--muted"), accent:g("--accent"),
+          hot:g("--hot"), good:g("--good"), path:g("--path"), teal:g("--teal"), sunk:g("--sunk") };
+    // rampa secuencial de un solo tono: menor error = azul más intenso
+    C.rampLo = isDark() ? [92,150,232] : [29,90,166];
+    C.rampHi = isDark() ? [27,36,48]   : [236,240,247];
+  }
+  const ramp = t => { t = clamp(t,0,1); return C.rampLo.map((v,i) => Math.round(v + (C.rampHi[i]-v)*t)); };
+  const rgb = (c, al=1) => `rgba(${c[0]},${c[1]},${c[2]},${al})`;
+  const hexA = (hex, al) => { const h = hex.replace("#",""); const v = parseInt(h.length===3 ? h.split("").map(c=>c+c).join("") : h, 16);
+    return `rgba(${(v>>16)&255},${(v>>8)&255},${v&255},${al})`; };
+
+  // ================= Estado =================
+  let a = -3, b = 25, path = [], anim = null, gdIter = 0, view = "map";
+  let yaw = -0.62, pitch = 0.42;
+
+  // ================= Utilidades de canvas =================
+  function setup(cv) {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    const h = Number(cv.getAttribute("height"));
+    cv.style.height = h + "px";
+    const W = Math.max(r.width, 10);
+    cv.width = Math.round(W*dpr); cv.height = Math.round(h*dpr);
+    const g = cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0);
+    return { g, w: W, h, dpr };
+  }
+  const FONT = s => `${s}px 'IBM Plex Sans', system-ui, sans-serif`;
+  function axes(g, w, h, m, xr, yr, xt, yt, xl, yl, xd=1, yd=0) {
+    const X = v => m.l + (v-xr[0])/(xr[1]-xr[0])*(w-m.l-m.r);
+    const Y = v => h - m.b - (v-yr[0])/(yr[1]-yr[0])*(h-m.t-m.b);
+    g.font = FONT(12); g.fillStyle = C.muted; g.strokeStyle = C.line; g.lineWidth = 1;
+    for (const t of xt) { g.beginPath(); g.moveTo(X(t), m.t); g.lineTo(X(t), h-m.b); g.stroke(); g.textAlign="center"; g.fillText(fmt(t, Number.isInteger(t)?0:xd), X(t), h-m.b+16); }
+    for (const t of yt) { g.beginPath(); g.moveTo(m.l, Y(t)); g.lineTo(w-m.r, Y(t)); g.stroke(); g.textAlign="right"; g.fillText(fmt(t, yd), m.l-6, Y(t)+4); }
+    g.textAlign="center"; g.fillStyle = C.ink; g.font = FONT(13);
+    g.fillText(xl, (m.l + w - m.r)/2, h-6);
+    g.save(); g.translate(14, (m.t + h - m.b)/2); g.rotate(-Math.PI/2); g.fillText(yl, 0, 0); g.restore();
+    return { X, Y };
+  }
+  const range = (s,e,st) => { const o=[]; for (let v=s; v<=e+1e-9; v+=st) o.push(+v.toFixed(6)); return o; };
+  function dot(g, x, y, r, fill) { g.fillStyle = fill; g.strokeStyle = C.panel; g.lineWidth = 2; g.beginPath(); g.arc(x, y, r, 0, 2*Math.PI); g.fill(); g.stroke(); }
+  function arrow(g, x0, y0, x1, y1, col, wdt=2.5) {
+    const ang = Math.atan2(y1-y0, x1-x0), hd = 10;
+    g.strokeStyle = col; g.fillStyle = col; g.lineWidth = wdt;
+    g.beginPath(); g.moveTo(x0,y0); g.lineTo(x1 - Math.cos(ang)*hd*0.6, y1 - Math.sin(ang)*hd*0.6); g.stroke();
+    g.beginPath(); g.moveTo(x1,y1); g.lineTo(x1 - hd*Math.cos(ang-0.42), y1 - hd*Math.sin(ang-0.42));
+    g.lineTo(x1 - hd*Math.cos(ang+0.42), y1 - hd*Math.sin(ang+0.42)); g.closePath(); g.fill();
+  }
+
+  // ================= 01 · Datos y recta =================
+  const cData = $("cData"), tip = $("tip"), chkSq = $("chkSq");
+  let dataGeo = null;
+  const labelOff = { "Ibagué":[-8,-8,"right"], "Cali":[8,-6,"left"], "Bucaramanga":[-8,14,"right"], "Bogotá":[-8,-8,"right"],
+                     "Tunja":[-10,18,"right","Tunja y Pasto"], "Pasto":[0,0,"left",""], "Ipiales":[0,20,"center"] };
+  function drawData() {
+    const { g, w, h } = setup(cData);
+    const m = { l: 48, r: 14, t: 10, b: 40 };
+    const { X, Y } = axes(g, w, h, m, [0,3.1], [8,32], range(0,3,0.5), range(10,30,5), "Altitud h (km)", "Temperatura T (°C)");
+    dataGeo = { X, Y, m, w, h };
+    g.save(); g.beginPath(); g.rect(m.l, m.t, w-m.l-m.r, h-m.t-m.b); g.clip();
+    // cuadrados de residuos (lado = |eᵢ| en la escala vertical): su área total representa S
+    if (chkSq.checked) {
+      for (const [,x,y] of D) {
+        const y0 = Y(y), y1 = Y(a*x+b), s = Math.abs(y1 - y0);
+        const left = X(x) + s > w - m.r;
+        const x0 = left ? X(x) - s : X(x);
+        g.fillStyle = hexA(C.hot, 0.16); g.strokeStyle = hexA(C.hot, 0.55); g.lineWidth = 1;
+        g.fillRect(x0, Math.min(y0,y1), s, s); g.strokeRect(x0, Math.min(y0,y1), s, s);
+      }
+    }
+    // residuos
+    g.strokeStyle = C.hot; g.lineWidth = 2;
+    for (const [,x,y] of D) { g.beginPath(); g.moveTo(X(x), Y(y)); g.lineTo(X(x), Y(a*x+b)); g.stroke(); }
+    // recta
+    g.strokeStyle = C.accent; g.lineWidth = 3; g.beginPath(); g.moveTo(X(0), Y(b)); g.lineTo(X(3.1), Y(a*3.1+b)); g.stroke();
+    g.restore();
+    // puntos y etiquetas
+    g.font = FONT(11);
+    for (const [c,x,y] of D) {
+      dot(g, X(x), Y(y), 5, C.ink);
+      const o = labelOff[c] || [8,-6,"left"]; g.fillStyle = C.muted; g.textAlign = o[2];
+      g.fillText(o[3] ?? c, X(x)+o[0], Y(y)+o[1]);
+    }
+  }
+  cData.addEventListener("pointermove", e => {
+    if (!dataGeo) return;
+    const r = cData.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    let best = null, bd = 16;
+    for (const d of D) { const dd = Math.hypot(dataGeo.X(d[1]) - px, dataGeo.Y(d[2]) - py); if (dd < bd) { bd = dd; best = d; } }
+    if (!best) { tip.style.opacity = 0; return; }
+    const [c,x,y] = best, yh = a*x + b, er = y - yh;
+    tip.innerHTML = `<b>${c}</b><br>h = <span class="mono">${fmt(x*1000,0)} m</span> · T = <span class="mono">${fmt(y,1)} °C</span><br>T̂ = <span class="mono">${fmt(yh,2)}</span> · e = <span class="mono">${fmt(er,2)}</span> · e² = <span class="mono">${fmt(er*er,2)}</span>`;
+    const card = cData.parentElement.getBoundingClientRect();
+    let left = e.clientX - card.left + 14, top = e.clientY - card.top - 70;
+    tip.style.opacity = 1; const tw = tip.offsetWidth;
+    if (left + tw > card.width - 8) left = e.clientX - card.left - tw - 14;
+    tip.style.left = left + "px"; tip.style.top = Math.max(top, 8) + "px";
+  });
+  cData.addEventListener("pointerleave", () => { tip.style.opacity = 0; });
+  chkSq.addEventListener("change", drawData);
+
+  // ================= 02a · Curvas de nivel =================
+  const cMap = $("cMap");
+  const levels = [10,12,15,20,30,50,80,120,180,260,360,500,700,1000];
+  let mapGeo = null, mapImg = null;
+  function buildMapImage(W, H, m, dpr) {
+    const off = document.createElement("canvas"); off.width = Math.round(W*dpr); off.height = Math.round(H*dpr);
+    const g = off.getContext("2d"), img = g.createImageData(off.width, off.height), px = img.data;
+    const pw = (W-m.l-m.r)*dpr, ph = (H-m.t-m.b)*dpr, ox = m.l*dpr, oy = m.t*dpr;
+    const band = new Int16Array(off.width*off.height).fill(-1);
+    const bandOf = s => { let k=0; while (k<levels.length && s>levels[k]) k++; return k; };
+    const edge = isDark() ? [70,90,115] : [255,255,255];
+    for (let j=0; j<off.height; j++) for (let i=0; i<off.width; i++) {
+      if (i<ox || i>=ox+pw || j<oy || j>=oy+ph) continue;
+      const aa = A0 + (i-ox)/pw*(A1-A0), bb = B1 - (j-oy)/ph*(B1-B0);
+      const k = bandOf(S(aa,bb)); band[j*off.width+i] = k;
+      const c = ramp(k/levels.length), p = (j*off.width+i)*4;
+      px[p]=c[0]; px[p+1]=c[1]; px[p+2]=c[2]; px[p+3]=255;
+    }
+    for (let j=1; j<off.height; j++) for (let i=1; i<off.width; i++) {
+      const k = band[j*off.width+i]; if (k<0) continue;
+      const kl = band[j*off.width+i-1], ku = band[(j-1)*off.width+i];
+      if ((kl>=0 && kl!==k) || (ku>=0 && ku!==k)) { const p=(j*off.width+i)*4; px[p]=edge[0]; px[p+1]=edge[1]; px[p+2]=edge[2]; }
+    }
+    g.putImageData(img, 0, 0);
+    return off;
+  }
+  function drawMap() {
+    const { g, w, h, dpr } = setup(cMap);
+    const m = { l: 48, r: 14, t: 10, b: 40 };
+    if (!mapImg || mapImg.width !== Math.round(w*dpr)) mapImg = buildMapImage(w, h, m, dpr);
+    g.drawImage(mapImg, 0, 0, w, h);
+    const pw = w-m.l-m.r, ph = h-m.t-m.b;
+    const X = v => m.l + (v-A0)/(A1-A0)*pw, Y = v => h - m.b - (v-B0)/(B1-B0)*ph;
+    mapGeo = { m, w, h, X, Y };
+    g.font = FONT(12); g.fillStyle = C.muted;
+    for (const t of range(-10,-3,1)) { g.textAlign="center"; g.fillText(fmt(t,0), X(t), h-m.b+16); }
+    for (const t of range(24,36,2)) { g.textAlign="right"; g.fillText(fmt(t,0), m.l-6, Y(t)+4); }
+    g.fillStyle = C.ink; g.font = FONT(13); g.textAlign="center";
+    g.fillText("Pendiente a (°C/km)", (m.l+w-m.r)/2, h-6);
+    g.save(); g.translate(14, (m.t+h-m.b)/2); g.rotate(-Math.PI/2); g.fillText("Intercepto b (°C)", 0, 0); g.restore();
+    // etiquetas de algunos niveles sobre el eje menor de las elipses
+    g.save(); g.beginPath(); g.rect(m.l, m.t, pw, ph); g.clip();
+    g.font = FONT(11); g.textAlign = "left";
+    for (const L of (pw > 420 ? [30, 120, 360] : [])) {
+      // punto sobre la recta b = b* (traza horizontal) donde S = L
+      const disc2 = (L - Smin)/Sxx; if (disc2 <= 0) continue;
+      const aa = aStar + Math.sqrt(disc2); if (aa > A1) continue;
+      const tx = X(aa) + 3, ty = Y(bStar) - 3;
+      g.fillStyle = isDark() ? C.ink : "#16202e"; g.globalAlpha = 0.75; g.fillText(`S = ${L}`, tx, ty); g.globalAlpha = 1;
+    }
+    // camino de descenso por gradiente
+    if (path.length > 1) {
+      g.strokeStyle = C.path; g.lineWidth = 2.5; g.beginPath();
+      path.forEach(([pa,pb],k) => k ? g.lineTo(X(pa),Y(pb)) : g.moveTo(X(pa),Y(pb))); g.stroke();
+    }
+    g.restore();
+    dot(g, X(aStar), Y(bStar), 7, C.good);
+    // −∇S en coordenadas de pantalla (para que se vea perpendicular a la curva de nivel)
+    const [ga, gb] = grad(a,b);
+    const gx = ga*(A1-A0)/pw, gy = -gb*(B1-B0)/ph, gl = Math.hypot(gx, gy);
+    if (Math.hypot(ga,gb) > 0.5 && !anim) {
+      const ux = -gx/gl, uy = -gy/gl, L = 52, px0 = X(a), py0 = Y(b);
+      // tangente a la curva de nivel
+      g.strokeStyle = C.ink; g.globalAlpha = .55; g.lineWidth = 1.5; g.setLineDash([4,4]);
+      g.beginPath(); g.moveTo(px0 - uy*30, py0 + ux*30); g.lineTo(px0 + uy*30, py0 - ux*30); g.stroke();
+      g.setLineDash([]); g.globalAlpha = 1;
+      arrow(g, px0, py0, px0 + ux*L, py0 + uy*L, C.ink);
+      g.font = FONT(12); g.fillStyle = C.ink; g.textAlign = "center";
+      g.fillText("−∇S", px0 + ux*(L+14), py0 + uy*(L+14) + 4);
+    }
+    dot(g, X(a), Y(b), 8, C.hot);
+  }
+
+  // ================= 02b · Superficie 3D =================
+  const c3d = $("c3d");
+  let zTop = 0;
+  { // altura máxima de S en el dominio (para normalizar z)
+    for (const aa of [A0,A1]) for (const bb of [B0,B1]) zTop = Math.max(zTop, S(aa,bb));
+  }
+  function draw3D() {
+    const { g, w, h } = setup(c3d);
+    const cx = w/2, cy = h*0.60, sc = Math.min(w, h*1.5)*0.30, Hz = 0.95;
+    const cyw = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const U = aa => ((aa - A0)/(A1 - A0))*2 - 1, V = bb => ((bb - B0)/(B1 - B0))*2 - 1, Z = s => s/zTop;
+    // z = S/S_max: escala lineal, la superficie es el paraboloide real
+    const P = (u, v, z) => { const x = u*cyw - v*syw, y = u*syw + v*cyw;
+      return [cx + sc*x, cy - sc*(y*sp + z*Hz*cp), y*cp - z*Hz*sp]; };
+    const N = 34, pts = [];
+    for (let i=0; i<=N; i++) { pts.push([]); for (let j=0; j<=N; j++) {
+      const aa = A0 + i/N*(A1-A0), bb = B0 + j/N*(B1-B0), s = S(aa,bb);
+      pts[i].push({ p: P(U(aa), V(bb), Z(s)), z: Z(s) }); } }
+    // base y ejes
+    const base = [P(-1,-1,0), P(1,-1,0), P(1,1,0), P(-1,1,0)];
+    g.fillStyle = C.sunk; g.strokeStyle = C.line; g.lineWidth = 1;
+    g.beginPath(); base.forEach((q,k) => k ? g.lineTo(q[0],q[1]) : g.moveTo(q[0],q[1])); g.closePath(); g.fill(); g.stroke();
+    // cuadrículas en orden de profundidad
+    const quads = [];
+    for (let i=0; i<N; i++) for (let j=0; j<N; j++) {
+      const q = [pts[i][j], pts[i+1][j], pts[i+1][j+1], pts[i][j+1]];
+      quads.push({ q, d: (q[0].p[2]+q[1].p[2]+q[2].p[2]+q[3].p[2])/4, z: (q[0].z+q[1].z+q[2].z+q[3].z)/4 });
+    }
+    quads.sort((A,B) => B.d - A.d);
+    const edge = isDark() ? "rgba(255,255,255,0.10)" : "rgba(22,32,46,0.14)";
+    for (const { q, z } of quads) {
+      g.beginPath(); q.forEach((o,k) => k ? g.lineTo(o.p[0],o.p[1]) : g.moveTo(o.p[0],o.p[1])); g.closePath();
+      g.fillStyle = rgb(ramp(Math.sqrt(z)*1.05)); g.fill(); g.strokeStyle = edge; g.lineWidth = 0.6; g.stroke();
+    }
+    // trazas por el punto actual
+    const curve = (fn, col) => { g.strokeStyle = col; g.lineWidth = 3; g.beginPath();
+      for (let k=0; k<=80; k++) { const t = k/80, q = fn(t); k ? g.lineTo(q[0],q[1]) : g.moveTo(q[0],q[1]); } g.stroke(); };
+    curve(t => { const aa = A0 + t*(A1-A0); return P(U(aa), V(b), Z(S(aa,b))); }, C.accent);
+    curve(t => { const bb = B0 + t*(B1-B0); return P(U(a), V(bb), Z(S(a,bb))); }, C.teal);
+    // mínimo y punto actual con su "plomada" al plano a-b
+    const drop = (aa, bb, col, r) => { const top = P(U(aa), V(bb), Z(S(aa,bb))), bot = P(U(aa), V(bb), 0);
+      g.strokeStyle = col; g.lineWidth = 1.5; g.setLineDash([4,3]); g.beginPath(); g.moveTo(bot[0],bot[1]); g.lineTo(top[0],top[1]); g.stroke(); g.setLineDash([]);
+      dot(g, bot[0], bot[1], 3.5, col); dot(g, top[0], top[1], r, col); };
+    drop(aStar, bStar, C.good, 6);
+    drop(a, b, C.hot, 7);
+    // rótulos de ejes
+    g.font = FONT(13); g.fillStyle = C.ink; g.textAlign = "center";
+    const la = P(0, -1.18, 0), lb = P(1.18, 0, 0), lz = P(-1, -1, 1.05);
+    g.fillText("a", la[0], la[1]); g.fillText("b", lb[0], lb[1]);
+    const zb = P(-1,-1,0); g.strokeStyle = C.muted; g.lineWidth = 1; g.beginPath(); g.moveTo(zb[0],zb[1]); g.lineTo(lz[0],lz[1]); g.stroke();
+    g.fillText("S", lz[0], lz[1]-6);
+    g.font = FONT(12); g.fillStyle = C.muted; g.textAlign = "left";
+    g.fillText("Arrastra para rotar la superficie", 10, 18);
+  }
+  let rot = null;
+  c3d.addEventListener("pointerdown", e => { rot = [e.clientX, e.clientY, yaw, pitch]; c3d.setPointerCapture(e.pointerId); });
+  c3d.addEventListener("pointermove", e => { if (!rot) return;
+    yaw = rot[2] + (e.clientX - rot[0])*0.01; pitch = clamp(rot[3] + (e.clientY - rot[1])*0.008, 0.2, 1.45); draw3D(); });
+  c3d.addEventListener("pointerup", () => { rot = null; });
+
+  function setView(v) {
+    view = v;
+    $("tabMap").setAttribute("aria-selected", v === "map"); $("tab3d").setAttribute("aria-selected", v === "3d");
+    cMap.hidden = v !== "map"; c3d.hidden = v !== "3d"; $("legMap").hidden = v !== "map"; $("leg3d").hidden = v !== "3d";
+    $("viewHint").textContent = v === "map"
+      ? "Haz clic o arrastra para elegir (a, b). La flecha −∇S apunta hacia donde S baja más rápido y es perpendicular a la curva de nivel."
+      : "Paraboloide elíptico z = S(a, b). Las curvas azul y verde azulado son las trazas que pasan por tu punto; ambas son parábolas que abren hacia arriba.";
+    drawViews();
+  }
+  $("tabMap").addEventListener("click", () => setView("map"));
+  $("tab3d").addEventListener("click", () => setView("3d"));
+
+  // ================= 04-05 · Trazas =================
+  function drawTrace(cv, isA) {
+    const { g, w, h } = setup(cv);
+    const m = { l: 52, r: 14, t: 10, b: 40 };
+    const xr = isA ? [A0, A1] : [B0, B1];
+    const f = v => isA ? S(v, b) : S(a, v);
+    const ymax = 400, col = isA ? C.accent : C.teal;
+    const { X, Y } = axes(g, w, h, m, xr, [0, ymax], isA ? range(-10,-3,1) : range(24,36,2), range(0,400,100),
+                          isA ? "a (°C/km)" : "b (°C)", "S");
+    g.save(); g.beginPath(); g.rect(m.l, m.t, w-m.l-m.r, h-m.t-m.b); g.clip();
+    g.strokeStyle = C.line; g.lineWidth = 2; g.setLineDash([5,4]); g.beginPath();
+    for (let k=0; k<=200; k++) { const v = xr[0] + k/200*(xr[1]-xr[0]); const s = isA ? S(v,bStar) : S(aStar,v); k ? g.lineTo(X(v),Y(s)) : g.moveTo(X(v),Y(s)); }
+    g.stroke(); g.setLineDash([]);
+    g.strokeStyle = col; g.lineWidth = 3; g.beginPath();
+    for (let k=0; k<=200; k++) { const v = xr[0] + k/200*(xr[1]-xr[0]); k ? g.lineTo(X(v),Y(f(v))) : g.moveTo(X(v),Y(f(v))); }
+    g.stroke(); g.restore();
+    // recta tangente en el punto actual: su pendiente es la derivada parcial
+    const cur = isA ? a : b, s0 = f(cur), [ga,gb] = grad(a,b), slope = isA ? ga : gb;
+    if (s0 < ymax) {
+      g.save(); g.beginPath(); g.rect(m.l, m.t, w-m.l-m.r, h-m.t-m.b); g.clip();
+      const dx = (xr[1]-xr[0])*0.12;
+      g.strokeStyle = C.hot; g.lineWidth = 1.5; g.beginPath();
+      g.moveTo(X(cur-dx), Y(s0 - slope*dx)); g.lineTo(X(cur+dx), Y(s0 + slope*dx)); g.stroke(); g.restore();
+      dot(g, X(cur), Y(s0), 6, C.hot);
+    }
+    dot(g, X(isA ? aStar : bStar), Y(Smin), 5, C.good);
+    g.font = FONT(12); g.fillStyle = C.ink; g.textAlign = "right";
+    g.fillText(`${isA ? "∂S/∂a" : "∂S/∂b"} = ${fmt(slope,1)} (pendiente de la tangente)`, w - m.r - 4, m.t + 14);
+  }
+
+  // ================= 03 · Cálculo en vivo =================
+  function staticMath() {
+    $("mS").innerHTML =
+      `S(a,b) = ${fmt(Sxx,4)}a² + ${fmt(2*Sx,1)}ab + ${fmt(n,0)}b²<br>` +
+      `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;− ${fmt(2*Sxy,3)}a − ${fmt(2*Sy,1)}b + ${fmt(Syy,2)}`;
+    $("mNorm").innerHTML =
+      `<span class="mat"><span>${fmt(Sxx,4)}</span><span>${fmt(Sx,1)}</span><span>${fmt(Sx,1)}</span><span>${fmt(n,0)}</span></span>` +
+      ` <span class="vec"><span>a</span><span>b</span></span> = ` +
+      `<span class="vec"><span>${fmt(Sxy,4)}</span><span>${fmt(Sy,1)}</span></span>`;
+    $("mSol").innerHTML = `a* = <span class="ok">${fmt(aStar,4)}</span> &nbsp; b* = <span class="ok">${fmt(bStar,4)}</span><br>S(a*, b*) = <span class="ok">${fmt(Smin,4)}</span>`;
+    $("mD").textContent = fmt(Det,4);
+    $("mH").innerHTML = `H = <span class="mat"><span>${fmt(H11,4)}</span><span>${fmt(H12,1)}</span><span>${fmt(H12,1)}</span><span>${fmt(H22,0)}</span></span>`
+      + `<br>det H = ${fmt(detH,2)} &gt; 0 &nbsp;y&nbsp; S<sub>aa</sub> = ${fmt(H11,2)} &gt; 0`;
+    $("mEig").innerHTML = `λ₁ = ${fmt(l1,2)} &nbsp; λ₂ = ${fmt(l2,2)} &nbsp;(ambos &gt; 0)`;
+    $("mHnote").textContent = `H no depende de (a, b), así que S es convexa en todo el plano: el punto crítico es un mínimo global, no solo local. `
+      + `Como √(λ₂/λ₁) ≈ ${fmt(Math.sqrt(l2/l1),1)}, las curvas de nivel son elipses unas ${fmt(Math.sqrt(l2/l1),1)} veces más largas que anchas: por eso el tazón es un valle alargado.`;
+    $("oA").textContent = fmt(aStar,4); $("oB").textContent = fmt(bStar,4);
+    $("oR2").textContent = fmt(1 - Smin/SST, 4);
+    $("oR2t").textContent = `la altitud explica el ${fmt(100*(1 - Smin/SST),1)} % de la variación`;
+    $("oRMSE").textContent = `${fmt(Math.sqrt(Smin/n),2)} °C`;
+  }
+  function liveMath() {
+    const [ga, gb] = grad(a,b);
+    $("mGrad").innerHTML =
+      `∂S/∂a = ${fmt(H11,4)}a + ${fmt(H12,1)}b − ${fmt(2*Sxy,3)}<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= <span class="live">${fmt(ga,2)}</span><br>` +
+      `∂S/∂b = ${fmt(H12,1)}a + ${fmt(H22,0)}b − ${fmt(2*Sy,1)}<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= <span class="live">${fmt(gb,2)}</span>`;
+    $("mGv").textContent = `(${fmt(ga,2)}; ${fmt(gb,2)})`;
+  }
+
+  // ================= 06 · Predicción y tabla =================
+  const sh = $("sh");
+  function predict() {
+    const hk = +sh.value/1000;
+    $("oh").textContent = `${fmt(+sh.value,0)} m`;
+    $("pT").textContent = `${fmt(aStar*hk + bStar,1)} °C`;
+    $("pNote").textContent = `Con la recta óptima: T̂ = ${fmt(aStar,4)}·(${fmt(hk,2)}) + ${fmt(bStar,4)}. `
+      + `Con la recta que tienes en los controles daría ${fmt(a*hk + b,1)} °C. `
+      + `Cada 1000 m de subida la temperatura baja unos ${fmt(-aStar,1)} °C; el RMSE indica que el error típico es de ±${fmt(Math.sqrt(Smin/n),1)} °C. `
+      + `Fuera de 0–3 km (el rango de los datos) la predicción es una extrapolación.`;
+  }
+  sh.addEventListener("input", predict);
+  function table() {
+    let se = 0, se2 = 0, rows = "";
+    for (const [c,x,y] of D) { const yh = a*x+b, e = y-yh; se += e; se2 += e*e;
+      rows += `<tr><td>${c}</td><td class="mono">${fmt(x,3)}</td><td class="mono">${fmt(y,1)}</td><td class="mono">${fmt(yh,2)}</td><td class="mono">${fmt(e,2)}</td><td class="mono">${fmt(e*e,2)}</td></tr>`; }
+    $("tbody").innerHTML = rows; $("sumE").textContent = fmt(se,2); $("sumE2").textContent = fmt(se2,4);
+  }
+
+  // ================= Actualización general =================
+  const sa = $("sa"), sb = $("sb");
+  function drawViews() { if (view === "map") drawMap(); else draw3D(); }
+  function update(fromSlider) {
+    if (!fromSlider) { sa.value = a; sb.value = b; }
+    $("oa").textContent = fmt(a); $("ob").textContent = fmt(b);
+    $("ta").textContent = fmt(a); $("tb").textContent = fmt(b);
+    $("eqLine").textContent = `T = ${fmt(a,4)}·h + ${fmt(b,4)}`;
+    const s = S(a,b), [ga,gb] = grad(a,b), gn = Math.hypot(ga,gb), r2 = 1 - s/SST;
+    $("vS").textContent = fmt(s); $("vRMSE").textContent = fmt(Math.sqrt(s/n));
+    $("vR2").textContent = fmt(r2, 4); $("vR2t").textContent = r2 < 0 ? "peor que usar el promedio" : `explica el ${fmt(100*r2,1)} %`;
+    $("vGn").textContent = fmt(gn);
+    const pill = $("pill"), near = s - Smin < 0.005;
+    pill.textContent = near ? "En el mínimo: ∇S ≈ 0" : `${fmt(s - Smin)} por encima del mínimo`;
+    pill.classList.toggle("ok", near);
+    liveMath(); table(); predict();
+    drawData(); drawViews();
+    drawTrace($("cTa"), true); drawTrace($("cTb"), false);
+  }
+  function stop() { if (anim) { cancelAnimationFrame(anim); anim = null; } }
+  const say = t => { $("status").textContent = t; };
+
+  sa.addEventListener("input", () => { stop(); path = []; a = +sa.value; say(""); update(true); });
+  sb.addEventListener("input", () => { stop(); path = []; b = +sb.value; say(""); update(true); });
+
+  function fromPointer(e) {
+    const r = cMap.getBoundingClientRect(), { m, w, h } = mapGeo;
+    a = clamp(A0 + (e.clientX - r.left - m.l)/(w - m.l - m.r)*(A1 - A0), A0, A1);
+    b = clamp(B0 + (h - m.b - (e.clientY - r.top))/(h - m.t - m.b)*(B1 - B0), B0, B1);
+    update(false);
+  }
+  let dragging = false;
+  cMap.addEventListener("pointerdown", e => { stop(); path = []; say(""); dragging = true; cMap.setPointerCapture(e.pointerId); fromPointer(e); });
+  cMap.addEventListener("pointermove", e => { if (dragging) fromPointer(e); });
+  cMap.addEventListener("pointerup", () => { dragging = false; });
+  cMap.addEventListener("keydown", e => {
+    const st = e.shiftKey ? 0.5 : 0.1; let used = true;
+    if (e.key === "ArrowLeft") a = clamp(a - st, A0, A1); else if (e.key === "ArrowRight") a = clamp(a + st, A0, A1);
+    else if (e.key === "ArrowUp") b = clamp(b + st, B0, B1); else if (e.key === "ArrowDown") b = clamp(b - st, B0, B1); else used = false;
+    if (used) { e.preventDefault(); stop(); path = []; update(false); }
+  });
+
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function animateTo(ta, tb, msg) {
+    stop(); path = []; say(msg);
+    if (reduce) { a = ta; b = tb; update(false); return; }
+    const a0 = a, b0 = b, t0 = performance.now(), dur = 900;
+    const step = now => { const t = Math.min((now - t0)/dur, 1), e = 1 - Math.pow(1 - t, 3);
+      a = a0 + (ta - a0)*e; b = b0 + (tb - b0)*e;
+      anim = t < 1 ? requestAnimationFrame(step) : null; update(false); };
+    anim = requestAnimationFrame(step);
+  }
+  $("btnMin").addEventListener("click", () => animateTo(aStar, bStar, "Solución de las ecuaciones normales: aquí ∇S = (0, 0)."));
+  $("btnReset").addEventListener("click", () => animateTo(-3, 25, "Punto de partida (−3; 25), el mismo de la figura de curvas de nivel del informe."));
+  $("btnGD").addEventListener("click", () => {
+    stop(); path = [[a,b]]; gdIter = 0;
+    const eta = 1/l2;   // paso η = 1/λ_max: garantiza convergencia en una cuadrática
+    const one = () => { const [ga,gb] = grad(a,b); a -= eta*ga; b -= eta*gb; path.push([a,b]); gdIter++; };
+    const done = () => Math.hypot(...grad(a,b)) <= 1e-4 || gdIter >= 3000;
+    const report = () => say(`Descenso por gradiente: (a, b) ← (a, b) − η∇S con η = 1/λ₂ = ${fmt(eta,4)}. Iteración ${gdIter}: S = ${fmt(S(a,b),4)}.`);
+    if (reduce) { while (!done()) one(); report(); update(false); return; }
+    const step = () => { for (let k=0; k<3 && !done(); k++) one();
+      anim = done() ? null : requestAnimationFrame(step); report(); update(false); };
+    anim = requestAnimationFrame(step);
+  });
+
+  // ================= Tema =================
+  function applyTheme() {
+    readColors(); mapImg = null;
+    $("btnTheme").textContent = isDark() ? "Tema claro" : "Tema oscuro";
+    update(false);
+  }
+  $("btnTheme").addEventListener("click", () => {
+    document.documentElement.dataset.theme = isDark() ? "light" : "dark";
+    try { localStorage.setItem("tema", document.documentElement.dataset.theme); } catch (e) {}
+    applyTheme();
+  });
+  try { const t = localStorage.getItem("tema"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyTheme);
+
+  let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { mapImg = null; update(false); }, 120); });
+  readColors(); staticMath(); applyTheme();
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => update(false));
+})();
+</script>
+</body>
+</html>
